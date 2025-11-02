@@ -5,15 +5,16 @@ import (
 	"log"
 	"errors"
 	"drawing-api/internal/api/handlers"
+
 )
 
-type appHandler func(http.ResponseWriter, *http.Request) error
+type AppHandler func(http.ResponseWriter, *http.Request) error
 
-func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (fn AppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := fn(w, r); err != nil {
-		var apiErr handlers.APIError
+		var apiErr APIError
 		if errors.As(err, &apiErr) {
-			handlers.WriteJSONError(w, apiErr)
+			WriteJSONError(w, apiErr)
 		} else {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 		}
@@ -24,10 +25,10 @@ func InitRouter(authHandler *handlers.AuthHandler) {
 	mux := http.NewServeMux()
 
 	// Public
-	mux.Handle("POST /register", appHandler(authHandler.Register))
-	mux.Handle("POST /login",    appHandler(authHandler.Login))
-	mux.HandleFunc("POST /refresh", handlers.Refresh)
-	mux.HandleFunc("POST /logout", handlers.Logout)
+	mux.Handle("POST /register", AppHandler(authHandler.Register))
+	mux.Handle("POST /login",    AppHandler(authHandler.Login))
+	mux.Handle("POST /refresh", authHandler.Refresh)
+	mux.Handle("POST /logout", authHandler.Logout)
 
 	// Start server
 	log.Println("Server starting on :8080")
