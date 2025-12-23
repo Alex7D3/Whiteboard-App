@@ -5,10 +5,10 @@ import (
 	"time"
 	"fmt"
 	"context"
-	"encoding/json"
 	"drawing-api/internal/storage"
 	"drawing-api/internal/model"
 	"drawing-api/internal/util"
+	"drawing-api/internal/api"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -21,18 +21,19 @@ type AuthHandler struct {
 	userStorage storage.UserStorage
 	jwtSecret []byte
 	claims JwtClaims
+	timeout time.Duration
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) error {
-	ctx, cancel := context.WithTimeout(r.Context, h.timeout)
+	ctx, cancel := context.WithTimeout(r.Context(), h.timeout)
 	defer cancel()
 	var userReq model.UserRequest
-	if err := ParseJSON(r, &userReq); err != nil {
+	if err := api.ParseJSON(r, &userReq); err != nil {
 		return err
 	}
 	_, err := h.userStorage.GetByEmail(ctx, userReq.Email)
 	if err == nil {
-		return NewApiError(
+		return api.NewAPIError(
 			fmt.Sprintf("user with email '%s' already exists", userReq.Email),
 			http.StatusConflict,
 		)
@@ -47,24 +48,23 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	userRes := model.NewUserResponse(id, user.UserName, user.Email)
-	return WriteJSON(w, http.StatusOK, userRes)
+	return api.WriteJSON(w, http.StatusOK, userRes)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) error {
-	ctx, cancel := context.WithTimeout(r.Context, h.timeout)
+	ctx, cancel := context.WithTimeout(r.Context(), h.timeout)
 	defer cancel()
 	var userReq model.UserRequest
-	if err := json.NewDecoder(r.Body).Decode(*userReq); err != nil {
-		return NewAPIError("Invalid message body", http.StatusBadRequest)
+	if err := api.ParseJSON(r, &userReq); err != nil {
+		return api.NewAPIError("Invalid message body", http.StatusBadRequest)
 	}
-	var user model.User
-	user, err := h.userStorage.GetByEmail(userReq.Email)
+	user, err := h.userStorage.GetByEmail(ctx, userReq.Email)
 	if err != nil {
 		msg := fmt.Sprintf("No account with email '%s' found", userReq.Email)
-		return NewAPIError(msg, http.StatusNotFound)
+		return api.NewAPIError(msg, http.StatusNotFound)
 	}
 	if !util.CheckPasswordHash(userReq.Password, user.PasswordHash) {
-		return NewAPIError("Incorrect password", http.StatusUnauthorized)
+		return api.NewAPIError("Incorrect password", http.StatusUnauthorized)
 	}
 	expTime := time.Now().Add(5 * time.Minute)
 	claims := &JwtClaims{
@@ -83,15 +83,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) error {
 		Value: signedStr,
 		Expires: expTime,
 	})
-	return WriteJSON(w, http.StatusOK, user)
+	return api.WriteJSON(w, http.StatusOK, user)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r http.Request) error {
-
+	return nil
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r http.Request) error {
 	ctx := r.Context()
-	id, err := h.userStorage.GetById(ctx.Value("id").(int))
-	if id != nil
+	id, err := h.userStorage.GetById(ctx, ctx.Value("id").(int))
+	if id != nil {
+		return err
+	}
+	return nil
 }

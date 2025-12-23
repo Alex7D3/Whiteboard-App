@@ -26,7 +26,6 @@ func InitDB() error {
 		return err
 	}
 
-	// Optional: ping again to verify connection
 	if err := DB.Ping(); err != nil {
 		return err
 	}

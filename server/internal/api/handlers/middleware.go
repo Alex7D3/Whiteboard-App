@@ -9,17 +9,18 @@ import (
 	"drawing-api/internal/storage"
 	"drawing-api/internal/model"
 	"drawing-api/internal/util"
+	"drawing-api/internal/api"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 func (h *AuthHandler) Authorize(next api.AppHandler) api.AppHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		cookie, err := r.Cookie("auth_token")
+		if err == http.ErrNoCookie {
+			return api.NewAPIError("Missing cookie", http.StatusUnauthorized)
+		}
 		if err != nil {
-			if err == http.ErrNoCookie {
-				return NewAPIError("Missing cookie", http.StatusUnauthorized)
-			}
-			return NewAPIError("Invalid cookie", http.StatusBadRequest)
+			return api.NewAPIError("Invalid cookie", http.StatusBadRequest)
 		}
 		tokenStr := cookie.Value
 		claims := JwtClaims{}
