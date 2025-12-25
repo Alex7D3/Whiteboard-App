@@ -5,7 +5,7 @@ import (
 )
 
 type User struct {
-	ID           int       `json:"id"         db:"user_id"`
+	ID           int64     `json:"id"         db:"user_id"`
 	UserName     string    `json:"username"   db:"username"`
 	Email        string    `json:"email"      db:"email"`
 	PasswordHash string    `json:"-"          db:"password_hash"`
@@ -28,12 +28,12 @@ type UserRequest struct {
 }
 
 type UserResponse struct {
-	ID           int    `json:"id"`
+	ID           int64  `json:"id"`
 	UserName     string `json:"username"`
 	Email        string `json:"email"`
 }
 
-func NewUserResponse(id int, username string, email string) *UserResponse {
+func NewUserResponse(id int64, username string, email string) *UserResponse {
 	return &UserResponse{
 		ID: id,
 		UserName: username,
