@@ -22,8 +22,8 @@ func WriteJSON(w http.ResponseWriter, status int, output any) error {
 	return json.NewEncoder(w).Encode(output)
 }
 
-func WriteJSONError(w http.ResponseWriter, apiErr APIError) {
+func WriteJSONError(w http.ResponseWriter, apiErr *APIError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(apiErr.Status)
-	fmt.Fprintf(w, `{"error":"%s"}`, apiErr.Message)
+	fmt.Fprintf(w, `{"error":"%s"}`, apiErr)
 }
