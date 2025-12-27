@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-
 	"github.com/jmoiron/sqlx"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 var DB *sqlx.DB
@@ -20,8 +20,8 @@ func InitDB() error {
 		os.Getenv("PG_NAME"),
 	)
 
-	var err error
-	DB, err = sqlx.Connect("postgres", connStr)
+	print(connStr)
+	DB, err := sqlx.Connect("pgx", connStr)
 	if err != nil {
 		return err
 	}

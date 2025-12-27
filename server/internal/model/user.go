@@ -13,7 +13,7 @@ type User struct {
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }
 
-func NewUser(username string, email, passwordhash string) *User {
+func NewUser(username string, email string, passwordhash string) *User {
 	return &User{
 		UserName: username,
 		Email: email,
