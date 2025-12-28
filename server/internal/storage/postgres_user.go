@@ -16,7 +16,7 @@ func NewPGUserStorage(dbx *sqlx.DB) *PGUserStorage {
 
 func (s *PGUserStorage) Create(ctx context.Context, user *model.User) (int64, error) {
 	var id int64
-	const query = "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING user_id"
+	const query = "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id"
 	err := s.db.QueryRowContext(ctx, query,
 		user.UserName, user.Email, user.PasswordHash,
 	).Scan(&id)
@@ -25,7 +25,7 @@ func (s *PGUserStorage) Create(ctx context.Context, user *model.User) (int64, er
 
 func (s *PGUserStorage) GetByID(ctx context.Context, id int64) (*model.User, error) {
 	var user model.User
-	err := s.db.GetContext(ctx, &user, "SELECT * FROM users WHERE user_id = $1", id)
+	err := s.db.GetContext(ctx, &user, "SELECT * FROM users WHERE id = $1", id)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 )
 
 type User struct {
-	ID           int64     `json:"id"         db:"user_id"`
+	ID           int64     `json:"id"         db:"id"`
 	UserName     string    `json:"username"   db:"username"`
 	Email        string    `json:"email"      db:"email"`
 	PasswordHash string    `json:"-"          db:"password_hash"`
@@ -23,8 +23,8 @@ func NewUser(username string, email string, passwordhash string) *User {
 
 type UserRequest struct {
 	Username string `json:"username,omitempty"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type UserResponse struct {

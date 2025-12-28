@@ -40,6 +40,12 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) error {
 	if err := api.ParseJSON(r, &userReq); err != nil {
 		return err
 	}
+	if userReq.Email == "" || userReq.Username == "" {
+        return api.NewAPIError("email and username are required", http.StatusBadRequest)
+    }
+    if len(userReq.Password) < 6 {
+        return api.NewAPIError("password must be at least 6 characters", http.StatusBadRequest)
+    }
 	_, err := h.userStorage.GetByEmail(ctx, userReq.Email)
 	if err == nil {
 		return api.NewAPIError(
