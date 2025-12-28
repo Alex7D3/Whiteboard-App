@@ -12,16 +12,17 @@ var DB *sqlx.DB
 
 func InitDB() error {
 	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=require",
-		os.Getenv("PG_HOST"),
-		os.Getenv("PG_PORT"),
-		os.Getenv("PG_USER"),
-		os.Getenv("PG_PASSWORD"),
-		os.Getenv("PG_NAME"),
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("POSTGRES_HOST"),
+		os.Getenv("POSTGRES_PORT"),
+		os.Getenv("POSTGRES_USER"),
+		os.Getenv("POSTGRES_PASSWORD"),
+		os.Getenv("POSTGRES_DB"),
 	)
 
-	print(connStr)
-	DB, err := sqlx.Connect("pgx", connStr)
+	var err error
+	
+	DB, err = sqlx.Connect("pgx", connStr)
 	if err != nil {
 		return err
 	}
