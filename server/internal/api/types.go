@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"errors"
+	"log"
 )
 
 type APIError struct {
@@ -23,6 +24,7 @@ type AppHandler func(http.ResponseWriter, *http.Request) error
 
 func (fn AppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := fn(w, r); err != nil {
+		log.Print(err)
 		var apiErr *APIError
 		if errors.As(err, &apiErr) {
 			WriteJSONError(w, apiErr)
