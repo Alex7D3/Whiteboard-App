@@ -22,10 +22,11 @@ func WriteJSON(w http.ResponseWriter, status int, output any) error {
 	return json.NewEncoder(w).Encode(output)
 }
 
-func WriteJSONMessage(w http.ResponseWriter, status int, output string) {
+func WriteJSONMessage(w http.ResponseWriter, status int, output string) error {
 	w.WriteHeader(status)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"message":"%s"}`, output)
+	return nil
 }
 
 func WriteJSONError(w http.ResponseWriter, apiErr *APIError) {

@@ -100,8 +100,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) error {
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) error {
 	h.cookieService.RemoveAuthCookie(w)
-	api.WriteJSONMessage(w, http.StatusOK, "Logged out")
-	return nil
+	return api.WriteJSONMessage(w, http.StatusOK, "Logged out")
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) error {
@@ -115,6 +114,5 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) error {
 	}
 	refreshedSS, err := h.tokenService.RefreshString(extractedClaims)
 	h.cookieService.SetAuthCookie(w, refreshedSS)
-	api.WriteJSONMessage(w, http.StatusOK, "Refreshed")
-	return nil
+	return api.WriteJSONMessage(w, http.StatusOK, "Refreshed")
 }
