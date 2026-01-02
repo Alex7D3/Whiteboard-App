@@ -113,6 +113,9 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	refreshedSS, err := h.tokenService.RefreshString(extractedClaims)
+	if err != nil {
+		return err
+	}
 	h.cookieService.SetAuthCookie(w, refreshedSS)
 	return api.WriteJSONMessage(w, http.StatusOK, "Refreshed")
 }

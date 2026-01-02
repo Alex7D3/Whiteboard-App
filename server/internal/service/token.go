@@ -11,6 +11,7 @@ import (
 type JwtClaims struct {
 	ID 		 int64  `json:"id"`
 	Email    string `json:"email"`
+	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 
@@ -31,6 +32,7 @@ func (s *TokenService) GetSignedString(user *model.User) (string, error) {
 	claims := &JwtClaims{
 		ID: user.ID,
 		Email: user.Email,
+		Username: user.UserName,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expTime),
 		},
@@ -50,13 +52,13 @@ func (s *TokenService) VerifyToken(signedString string) (*JwtClaims, error) {
 		return nil, err
 	}
 
-	if time.Now().Before(extractedClaims.ExpiresAt.Time) {
-		return nil, api.NewAPIError("Token has not expired", http.StatusBadRequest)
-	}
 	return extractedClaims, nil
 }
 
 func (s *TokenService) RefreshString(claims *JwtClaims) (string, error) {
+	if time.Now().Before(claims.ExpiresAt.Time) {
+		return "", api.NewAPIError("Token has not expired", http.StatusBadRequest)
+	}
 	expTime := time.Now().Add(s.expireMinutes * time.Minute)
 	claims.ExpiresAt = jwt.NewNumericDate(expTime)
 	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

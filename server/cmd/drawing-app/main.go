@@ -5,6 +5,7 @@ import (
 	"drawing-api/internal/storage"
 	"drawing-api/internal/service"
 	"drawing-api/internal/router"
+	"drawing-api/internal/ws"
 	"drawing-api/internal/db"
 	"time"
 	"os"
@@ -20,11 +21,14 @@ func main() {
 	}
 	defer db.DB.Close()
 
-	h := handlers.NewAuthHandler(
+	authHandler := handlers.NewAuthHandler(
 		storage.NewPGUserStorage(db.DB),
 		service.NewTokenService(jwtSecret, tokenTimeout),
 		service.NewCookieService("auth_token", tokenTimeout),
 		dbTimeout,
 	)
-	router.InitRouter(h)
+
+	wsHandler := handlers.NewWsHandler(ws.NewHub())
+			
+	router.InitRouter(authHandler, wsHandler)
 }
