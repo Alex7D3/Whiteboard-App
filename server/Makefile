@@ -7,6 +7,8 @@ export $(shell sed 's/=.*//' .env)
 
 
 all: build
+dev:
+	go run cmd/drawing-app/main.go
 
 build:
 	@echo "Building..."
