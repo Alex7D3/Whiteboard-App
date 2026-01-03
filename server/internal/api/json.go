@@ -17,14 +17,14 @@ func ParseJSON(r *http.Request, payload any) error {
 }
 
 func WriteJSON(w http.ResponseWriter, status int, output any) error {
-	w.WriteHeader(status)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(output)
 }
 
 func WriteJSONMessage(w http.ResponseWriter, status int, output string) error {
-	w.WriteHeader(status)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 	fmt.Fprintf(w, `{"message":"%s"}`, output)
 	return nil
 }
