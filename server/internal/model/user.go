@@ -28,9 +28,14 @@ type UserRequest struct {
 }
 
 type UserResponse struct {
-	ID           int64  `json:"id"`
-	UserName     string `json:"username"`
-	Email        string `json:"email"`
+	ID          int64  `json:"id"`
+	UserName    string `json:"username"`
+	Email       string `json:"email"`
+}
+
+type LoginResponse struct {
+	User        *UserResponse `json:"user"`
+	AccessToken string       `json:"access_token"`
 }
 
 func NewUserResponse(id int64, username string, email string) *UserResponse {
@@ -38,5 +43,12 @@ func NewUserResponse(id int64, username string, email string) *UserResponse {
 		ID: id,
 		UserName: username,
 		Email: email,
+	}
+}
+
+func NewLoginResponse(id int64, username string, email string, accessToken string) *LoginResponse {
+	return &LoginResponse{
+		User: NewUserResponse(id, username, email),
+		AccessToken: accessToken,
 	}
 }
