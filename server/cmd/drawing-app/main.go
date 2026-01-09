@@ -10,11 +10,16 @@ import (
 	"time"
 	"os"
 )
-func main() {
-	var tokenTimeout time.Duration = 5
-	var dbTimeout time.Duration = time.Second * 10
-	var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
+const (
+	accessExpiry = time.Minute * 5
+	refreshExpiry = time.Hour * 24 * 7
+	dbTimeout = time.Second * 10
+)
+
+var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+
+func main() {
 	err := db.InitDB()
 	if err != nil {
 		panic(err)
@@ -23,9 +28,12 @@ func main() {
 
 	authHandler := handlers.NewAuthHandler(
 		storage.NewPGUserStorage(db.DB),
-		service.NewTokenService(jwtSecret, tokenTimeout),
-		service.NewCookieService("auth_token", tokenTimeout),
+		storage.NewPGSessionStorage(db.DB),
+		service.NewTokenService(jwtSecret),
+		service.NewCookieService("refresh_token"),
 		dbTimeout,
+		accessExpiry,
+		refreshExpiry,
 	)
 
 	wsHandler := handlers.NewWsHandler(ws.NewHub())

@@ -28,7 +28,7 @@ func NewTokenService(jwtSecret []byte) *TokenService {
 	}
 }
 
-func (s *TokenService) MakeJwtToken(user *model.User, ttl time.Duration) (string, error) {
+func (s *TokenService) MakeJwtToken(ttl time.Duration, user *model.User) (string, error) {
 	claims := &JwtClaims{
 		ID: user.ID,
 		Username: user.UserName,
@@ -59,7 +59,7 @@ func (s *TokenService) VerifyJwtToken(signedString string) (*JwtClaims, error) {
 	return extractedClaims, nil
 }
 
-func (s *TokenService) RefreshJwtToken(claims *JwtClaims, ttl time.Duration) (string, error) {
+func (s *TokenService) RefreshJwtToken(ttl time.Duration, claims *JwtClaims) (string, error) {
 	if time.Now().Before(claims.ExpiresAt.Time) {
 		return "", api.NewAPIError("Token has not expired", http.StatusBadRequest)
 	}

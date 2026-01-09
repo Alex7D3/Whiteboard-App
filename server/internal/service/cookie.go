@@ -7,23 +7,21 @@ import (
 )
 
 type CookieService struct {
-	cookieName    string
-	expireMinutes time.Duration
+	cookieName string
 }
 
-func NewCookieService(cookieName string, expireMinutes time.Duration) *CookieService {
+func NewCookieService(cookieName string) *CookieService {
 	return &CookieService {
 		cookieName,
-		expireMinutes,
 	}
 }
 
-func (s *CookieService) SetAuthCookie(w http.ResponseWriter, signedString string) {
+func (s *CookieService) SetAuthCookie(w http.ResponseWriter, expiry time.Duration, signedString string) {
 	http.SetCookie(w, &http.Cookie{
 		Name: s.cookieName,
 		Value: signedString,
-		Path: "/",
-		Expires: time.Now().Add(s.expireMinutes * time.Minute),
+		Path: "/api/refresh",
+		Expires: time.Now().Add(expiry),
 		HttpOnly: true,
 	})
 }

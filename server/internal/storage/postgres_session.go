@@ -2,8 +2,11 @@ package storage
 
 import (
 	"drawing-api/internal/model"
+	"drawing-api/internal/util"
 	"github.com/jmoiron/sqlx"
-	"github.com/google/uuid"
+	"database/sql"
+	"fmt"
+	"time"
 	"context"
 )
 
@@ -16,22 +19,13 @@ func NewPGSessionStorage(dbx *sqlx.DB) *PGSessionStorage {
 }
 
 
-func (s *PGSessionStorage) Create(ctx context.Context, session *model.Session) (uuid.UUID, error) {
-	var id uuid.UUID 
-	const query = "INSERT INTO sessions (id, user_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, $4) RETURNING id"
+func (s *PGSessionStorage) Create(ctx context.Context, session *model.Session) (string, error) {
+	var id string
+	const query = "INSERT INTO sessions (token_hash, user_id,  expires_at) VALUES ($1, $2, $3) RETURNING token_hash"
 	err := s.db.QueryRowContext(ctx, query,
-		session.ID, session.UserID, session.RefreshTokenHash, session.ExpiresAt,
+		 session.TokenHash, session.UserID, session.ExpiresAt,
 	).Scan(&id)
 	return id, err
-}
-
-func (s *PGSessionStorage) GetByID(ctx context.Context, id uuid.UUID) (*model.Session, error) {
-	var session model.Session
-	err := s.db.GetContext(ctx, &session, "SELECT * FROM sessions WHERE id = $1", id)
-	if err != nil {
-		return nil, err
-	}
-	return &session, nil
 }
 
 func (s *PGSessionStorage) GetByUserID(ctx context.Context, id int64) (*model.Session, error) {
@@ -40,5 +34,68 @@ func (s *PGSessionStorage) GetByUserID(ctx context.Context, id int64) (*model.Se
 	if err != nil {
 		return nil, err
 	}
+	return &session, nil
+}
+
+func (s *PGSessionStorage) Revoke(ctx context.Context, token string) error {
+	hash := util.HashToken(token)
+	_, err := s.db.ExecContext(ctx, "UPDATE sessions SET revoked = TRUE WHERE token_hash = $1", hash)
+	return err
+}
+
+func (s *PGSessionStorage) RotateToken(ctx context.Context, expiry time.Duration, oldToken, newToken string) (*model.Session, error) {
+	errorStr := "Failed to rotate token: %v"
+
+	tx, err := s.db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+	})
+	defer tx.Rollback()
+
+	if err != nil {
+		return nil, fmt.Errorf(errorStr, err)
+	}
+
+	oldHash := util.HashToken(oldToken)
+	fmt.Println(oldHash)
+
+	// Find the session and lock down the record
+	var session model.Session
+	if err = tx.GetContext(ctx, &session, `
+		SELECT *
+		FROM sessions
+		WHERE token_hash = $1 
+		FOR UPDATE
+	`, oldHash);
+	err == sql.ErrNoRows || session.Revoked || time.Now().After(session.ExpiresAt) {
+		fmt.Println(err)
+		fmt.Println(session)
+		return nil, fmt.Errorf(errorStr, "token has expired or was revoked")
+	} else if err != nil {
+		return nil, fmt.Errorf(errorStr, err)
+	}
+
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE sessions
+		SET revoked = TRUE
+		WHERE token_hash = $1
+	`, oldHash);
+	err != nil {
+		return nil, fmt.Errorf(errorStr, err)
+	}
+
+	newHash := util.HashToken(newToken)
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO sessions (token_hash, user_id,  expires_at)
+		VALUES ($1, $2, $3) RETURNING token_hash
+	`, newHash, session.UserID, time.Now().Add(expiry));
+	err != nil {
+		return nil, fmt.Errorf(errorStr, err)
+	}
+
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf(errorStr, err)
+	}
+
 	return &session, nil
 }

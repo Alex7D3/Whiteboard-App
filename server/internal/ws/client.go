@@ -52,8 +52,8 @@ func (cl *Client) ReadMessage(hub *Hub) {
 				RoomID: cl.RoomID,
 				Username: cl.Username,
 			}
+		case websocket.BinaryMessage: 		
 		}
-			
 	}
 }
 

@@ -20,7 +20,7 @@ func InitRouter(authHandler *handlers.AuthHandler, wsHandler *handlers.WsHandler
 
 	// Authenticated
 	mux.Handle("POST /ws/create-room",       api.AppHandler(authHandler.Authorize(wsHandler.CreateRoom)))
-	mux.Handle("GET /ws/join-room/{roomID}", api.AppHandler(authHandler.Authorize(wsHandler.JoinRoom)))
+	mux.Handle("GET /ws/join-room/{roomID}", api.AppHandler(authHandler.AuthorizeWS(wsHandler.JoinRoom)))
 	
 	corsMux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", os.Getenv("CLIENT_URI"))

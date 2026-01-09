@@ -2,12 +2,13 @@ package storage
 
 import (
 	"drawing-api/internal/model"
-	"github.com/google/uuid"
 	"context"
+	"time"
 )
 
 type SessionStorage interface {
-	Create(ctx context.Context, session *model.Session) (uuid.UUID, error)
-	GetByID(ctx context.Context, id uuid.UUID) (*model.Session, error)
+	Create(ctx context.Context, session *model.Session) (string, error)
 	GetByUserID(ctx context.Context, id int64) (*model.Session, error)
+	RotateToken(ctx context.Context, expiry time.Duration, oldToken, newToken string) (*model.Session, error)
+	Revoke(ctx context.Context, token string) error
 }

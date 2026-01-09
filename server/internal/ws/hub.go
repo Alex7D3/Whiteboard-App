@@ -6,9 +6,9 @@ import (
 )
 
 type Room struct {
-	ID      uuid.UUID             `json:"id"`
-	Name    string	              `json:"name"`
-	Clients map[int64]*Client     `json:"clients"`
+	ID      uuid.UUID         `json:"id"`
+	Name    string	          `json:"name"`
+	Clients map[int64]*Client `json:"clients"`
 }
 
 type Hub struct {

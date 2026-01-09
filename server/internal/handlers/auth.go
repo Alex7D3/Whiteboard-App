@@ -5,6 +5,7 @@ import (
 	"time"
 	"fmt"
 	"context"
+	"strings"
 	"drawing-api/internal/storage"
 	"drawing-api/internal/service"
 	"drawing-api/internal/model"
@@ -40,6 +41,26 @@ func NewAuthHandler(
 	}
 }
 
+func (h *AuthHandler) extractBearerToken(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", api.NewAPIError("missing auth header", http.StatusUnauthorized)
+	}
+
+	prefix := "Bearer "
+	if !strings.HasPrefix(authHeader, prefix) {
+		return "", api.NewAPIError("missing Bearer prefix", http.StatusUnauthorized)
+	}
+
+	token := strings.TrimPrefix(authHeader, prefix)
+	token = strings.Trim(token, " ")
+	if token == "" {
+		return "", api.NewAPIError("missing bearer token", http.StatusUnauthorized)
+	}
+
+	return token, nil
+}
+
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) error {
 	ctx, cancel := context.WithTimeout(r.Context(), h.timeout)
 	defer cancel()
@@ -64,12 +85,12 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	user := model.NewUser(userReq.Username, userReq.Email, passwordHash)
+	user := &model.User{Username: userReq.Username, Email: userReq.Email, PasswordHash: passwordHash}
 	id, err := h.userStorage.Create(ctx, user)
 	if err != nil {
 		return err
 	}
-	userRes := model.NewUserResponse(id, user.UserName, user.Email)
+	userRes := &model.UserResponse{ID: id, Username: user.Username, Email: user.Email}
 	return api.WriteJSON(w, http.StatusOK, userRes)
 }
 
@@ -93,7 +114,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) error {
 		return api.NewAPIError("Incorrect password", http.StatusUnauthorized)
 	}
 
-	accessTok, err := h.tokenService.MakeJwtToken(user, h.accessExpiry)
+	accessTok, err := h.tokenService.MakeJwtToken(h.accessExpiry, user)
 	if err != nil {
 		return err
 	}
@@ -106,47 +127,62 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) error {
 	refreshTokHash := util.HashToken(refreshTok)
 
 	if _, err = h.sessionStorage.Create(ctx, &model.Session{
-		RefreshTokenHash: refreshTokHash,
+		TokenHash: refreshTokHash,
 		UserID: user.ID,
 		ExpiresAt: time.Now().Add(h.refreshExpiry),
 	}); err != nil {
 		return err
 	}
 
-	h.cookieService.SetAuthCookie(w, refreshTok)
+	h.cookieService.SetAuthCookie(w, h.refreshExpiry, refreshTok)
 
-	return api.WriteJSON(w, http.StatusOK, model.NewLoginResponse(
-		user.ID,
-		user.UserName,
-		user.Email,
-		accessTok,
-	))
+	return api.WriteJSON(w, http.StatusOK, &model.LoginResponse{
+		User: user,
+		AccessToken: accessTok,
+	})
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) error {
 	ctx, cancel := context.WithTimeout(r.Context(), h.timeout)
 	defer cancel()
-	cookie, err := r.Cookie("refresh_token")
-	if err == nil {
-		
+
+	refreshTok, err := h.cookieService.ExtractSignedString(r)
+	if err != nil {
+		h.sessionStorage.Revoke(ctx, refreshTok)
+		h.cookieService.RemoveAuthCookie(w)
 	}
-	h.cookieService.RemoveAuthCookie(w)
 	return api.WriteJSONMessage(w, http.StatusOK, "Logged out")
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) error {
-	ss, err := h.cookieService.ExtractSignedString(r)
+	ctx, cancel := context.WithTimeout(r.Context(), h.timeout)
+	defer cancel()
+
+	oldRefreshTok, err := h.cookieService.ExtractSignedString(r)
 	if err != nil {
 		return err
 	}
-	extractedClaims, err := h.tokenService.VerifyJwtToken(ss)
+
+	newRefreshTok, err := h.tokenService.MakeOpaqueToken()
 	if err != nil {
 		return err
 	}
-	refreshedSS, err := h.tokenService.RefreshJwtToken(extractedClaims, h.accessExpiry)
+
+	session, err := h.sessionStorage.RotateToken(ctx, h.refreshExpiry, oldRefreshTok, newRefreshTok)
 	if err != nil {
 		return err
 	}
-	h.cookieService.SetAuthCookie(w, refreshedSS)
-	return api.WriteJSONMessage(w, http.StatusOK, "Refreshed")
+
+	user, err := h.userStorage.GetByID(ctx, session.UserID)
+	if err != nil {
+		return err
+	}
+
+	newAccessTok, err := h.tokenService.MakeJwtToken(h.accessExpiry, user)
+	if err != nil {
+		return err
+	}
+
+	h.cookieService.SetAuthCookie(w, h.refreshExpiry, newRefreshTok)
+	return api.WriteJSON(w, http.StatusOK, &model.RefreshResponse{AccessToken: newAccessTok})
 }

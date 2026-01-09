@@ -18,7 +18,7 @@ func (s *PGUserStorage) Create(ctx context.Context, user *model.User) (int64, er
 	var id int64
 	const query = "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id"
 	err := s.db.QueryRowContext(ctx, query,
-		user.UserName, user.Email, user.PasswordHash,
+		user.Username, user.Email, user.PasswordHash,
 	).Scan(&id)
 	return id, err
 }
