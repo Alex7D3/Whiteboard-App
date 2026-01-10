@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dark-primary: #131a1c;
+  --color-dark-secondary: #1b2224;
+  --color-red: #e74c4c;
+  --color-green: #6bb85d;
+  --color-blue: #0183ff;
+  --color-grey: #dddfe2;
+  --color-white: #fff;
+}
+
+/* Ensure centering works by giving the body height */
+html, body {
+  height: 100%;
+  margin: 0;
+}
