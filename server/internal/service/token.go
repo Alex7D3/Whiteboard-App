@@ -31,7 +31,7 @@ func NewTokenService(jwtSecret []byte) *TokenService {
 func (s *TokenService) MakeJwtToken(ttl time.Duration, user *model.User) (string, error) {
 	claims := &JwtClaims{
 		ID: user.ID,
-		Username: user.UserName,
+		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.Email,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
