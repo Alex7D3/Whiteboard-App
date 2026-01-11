@@ -2,10 +2,10 @@
 
 import { useActionState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-
 import Link from "next/link";
+import { API_URL } from "@/src/constants/url";
 
-export default function SignUp() {
+export default function Register() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/";
@@ -16,7 +16,7 @@ export default function SignUp() {
     }
     formInput.delete("passwordconfirm");
     const payload = Object.fromEntries(formInput);
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/signup`, {
+    const res = await fetch(`${API_URL}/api/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)

@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-
 import Link from "next/link";
+import { API_URL } from "@/src/constants/url";
 
 export default function Login() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export default function Login() {
 
   async function submit(_: string | null, formInput: FormData) {
     const payload = Object.fromEntries(formInput);
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/login`, {
+    const res = await fetch(`${API_URL}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
