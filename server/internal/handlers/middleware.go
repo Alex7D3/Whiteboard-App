@@ -22,9 +22,6 @@ func (h *AuthHandler) Authorize(next api.AppHandler) api.AppHandler {
 			return api.NewAPIError("Invalid token", http.StatusUnauthorized)
 		}
 
-		fmt.Println(time.Now())
-		fmt.Println(claims.ExpiresAt.Time)
-		fmt.Println(time.Now().After(claims.ExpiresAt.Time))
 		if time.Now().After(claims.ExpiresAt.Time) {
 			return api.NewAPIError("Token has expired", http.StatusUnauthorized)
 		}
