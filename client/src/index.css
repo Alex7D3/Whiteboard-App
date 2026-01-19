@@ -10,7 +10,6 @@
   --color-white: #fff;
 }
 
-/* Ensure centering works by giving the body height */
 html, body {
   height: 100%;
   margin: 0;
