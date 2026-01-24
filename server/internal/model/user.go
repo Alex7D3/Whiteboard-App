@@ -13,12 +13,6 @@ type User struct {
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }
 
-type UserRequest struct {
-	Username string `json:"username,omitempty"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
 type UserResponse struct {
 	ID          int64  `json:"id"`
 	Username    string `json:"username"`

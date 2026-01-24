@@ -5,7 +5,6 @@ import (
 	"drawing-api/internal/api"
 	"context"
 	"time"
-	"fmt"
 )
 
 const ClaimsKey string = "user_claims"

@@ -64,28 +64,29 @@ func (h *AuthHandler) extractBearerToken(r *http.Request) (string, error) {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) error {
 	ctx, cancel := context.WithTimeout(r.Context(), h.timeout)
 	defer cancel()
-	var userReq model.UserRequest
-	if err := api.ParseJSON(r, &userReq); err != nil {
-		return err
-	}
-	if userReq.Email == "" || userReq.Username == "" {
+
+	email := r.FormValue("email")
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+
+	if email == "" || username == "" {
         return api.NewAPIError("email and username are required", http.StatusBadRequest)
     }
-    if len(userReq.Password) < 6 {
+    if len(password) < 6 {
         return api.NewAPIError("password must be at least 6 characters", http.StatusBadRequest)
     }
-	_, err := h.userStorage.GetByEmail(ctx, userReq.Email)
+	_, err := h.userStorage.GetByEmail(ctx, email)
 	if err == nil {
 		return api.NewAPIError(
-			fmt.Sprintf("user with email '%s' already exists", userReq.Email),
+			fmt.Sprintf("user with email '%s' already exists", email),
 			http.StatusConflict,
 		)
 	}
-	passwordHash, err := util.HashPassword(userReq.Password)
+	passwordHash, err := util.HashPassword(password)
 	if err != nil {
 		return err
 	}
-	user := &model.User{Username: userReq.Username, Email: userReq.Email, PasswordHash: passwordHash}
+	user := &model.User{Username: username, Email: email, PasswordHash: passwordHash}
 	id, err := h.userStorage.Create(ctx, user)
 	if err != nil {
 		return err
@@ -98,19 +99,16 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) error {
 	ctx, cancel := context.WithTimeout(r.Context(), h.timeout)
 	defer cancel()
 
-	var userReq model.UserRequest
+	email := r.FormValue("email")
+	password := r.FormValue("password")
 
-	if err := api.ParseJSON(r, &userReq); err != nil {
-		return api.NewAPIError("Invalid message body", http.StatusBadRequest)
-	}
-
-	user, err := h.userStorage.GetByEmail(ctx, userReq.Email)
+	user, err := h.userStorage.GetByEmail(ctx, email)
 	if err != nil {
-		msg := fmt.Sprintf("No account with email '%s' found", userReq.Email)
+		msg := fmt.Sprintf("No account with email '%s' found", email)
 		return api.NewAPIError(msg, http.StatusNotFound)
 	}
 
-	if !util.CheckPasswordHash(userReq.Password, user.PasswordHash) {
+	if !util.CheckPasswordHash(password, user.PasswordHash) {
 		return api.NewAPIError("Incorrect password", http.StatusUnauthorized)
 	}
 
