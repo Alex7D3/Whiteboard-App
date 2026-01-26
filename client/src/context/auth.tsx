@@ -1,86 +1,141 @@
-import { createContext, useState, useContext, useEffect } from "react";
+import { createContext, useState, useContext, useEffect, useCallback, useRef } from "react";
 import { API_URL } from "../constants/url";
+import type { User } from "../types/user";
 
-export type UserAuth = {
-  user: {
-    id: number;
-    username: string;
-    email: string;
-  };
-  accessToken: string;
-};
 
 interface AuthState {
-  login: (userAuth: UserAuth) => Promise<boolean>;
-  logout: () => Promise<void>;
-  refresh: () => Promise<string>;
+  isAuthenticated: boolean,
+  user: User | null;
+  accessToken: string | null;
   isLoading: boolean;
-  userAuth: UserAuth|null;
+  login: (form: FormData) => Promise<void>;
+  register: (form: FormData) => Promise<void>;
+  logout: () => Promise<void>;
+  refresh: () => Promise<string | null>;
+  authFetch: (url: string, options: RequestInit) => Promise<Response>;
 }
 
-export const AuthContext = createContext<AuthState|undefined>(undefined);
+export const AuthContext = createContext<AuthState | undefined>(undefined);
 
-export function AuthContextProvider({ children }: { children: React.ReactNode }) {
-  const [userAuth, setUserAuth] = useState<UserAuth|null>(null);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  
-  async function login(userAuth: UserAuth) {
-    setUserAuth(userAuth);
-    return true;
+
+  const refreshing = useRef<Promise<string | null>>(null);
+
+  const refresh = useCallback(async () => {
+    if (refreshing.current) return refreshing.current;
+
+    async function tryRefresh() {
+      try {
+        const res = await fetch(`${API_URL}/api/refresh`, {
+          method: "POST",
+          credentials: "include"
+        });
+        const data = await res.json();
+
+        if (!res.ok)
+          throw new Error(`Failed to refresh: ${data.error}`);
+        setAccessToken(data.access_token);
+        setUser(data.user);
+        return data.access_token;
+      } catch (err) {
+        setAccessToken(null);
+        setUser(null);
+        return null;
+      } finally {
+        refreshing.current = null;
+      }
+    }
+    refreshing.current = tryRefresh();
+    return refreshing.current;
+  }, []);
+
+  const authFetch = useCallback(async (url: string, options: RequestInit = {}) => {
+    const headers = new Headers(options.headers);
+    if (accessToken) {
+      headers.set("Authorization", `Bearer ${accessToken}`);
+    }
+    let res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+      const newToken = await refresh();
+      if (newToken) {
+        headers.set("Authorization", `Bearer ${newToken}`);
+        res = await fetch(url, { ...options, headers });
+      }
+    }
+    return res;
+  }, [accessToken, refresh]);
+
+  async function login(form: FormData) {
+    const res = await fetch(`${API_URL}/api/login`, {
+      method: "POST",
+      body: form,
+      credentials: "include"
+    });
+    const data = await res.json();
+
+    if (!res.ok)
+      throw new Error(`Failed to login ${data.error}`);
+
+    setAccessToken(data.access_token);
+    setUser(data.user);
+  }
+
+  async function register(form: FormData) {
+    const res = await fetch(`${API_URL}/api/register`, {
+      method: "POST",
+      body: form,
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(`Failed to register ${data.error}`);
+    }
+
   }
 
   async function logout() {
     await fetch(`${API_URL}/api/logout`, { method: "POST" });
-    setUserAuth(null);
+    setUser(null);
+    setAccessToken(null);
   }
 
-  async function refresh() {
-    const res = await fetch(`${API_URL}/api/refresh`, {
-      method: "POST",
-      credentials: "include",
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      await logout();
-      return Promise.reject(new Error("Failed to refresh token: " + data.error));
-    }
-    
-    setUserAuth(prev => {
-      if (!prev) return null;
-      return { ...prev, accessToken: data.access_token };
-    });
-    return data.access_token;
-  }
 
   useEffect(() => {
-    (async() => {
+    const initAuth = async () => {
       try {
         await refresh();
       } catch (err) {
-        console.error(err);
+        console.error("Initial session check failed", err);
       } finally {
         setIsLoading(false);
       }
-    })();
-  }, []);
+    };
+    initAuth();
+  }, [refresh]);
 
   return (
     <AuthContext.Provider value={{
-        login,
-        logout,
-        refresh,
-        isLoading,
-        userAuth,
-      }}
+      isAuthenticated: accessToken !== null,
+      user,
+      isLoading,
+      accessToken,
+      login,
+      register,
+      logout,
+      refresh,
+      authFetch
+    }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthState {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used inside <AuthContextProvider/>");
+  if (!context) throw new Error("useAuth must be used inside <AuthProvider/>");
   return context;
 }

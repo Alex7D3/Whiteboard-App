@@ -135,7 +135,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) error {
 	h.cookieService.SetAuthCookie(w, h.refreshExpiry, refreshTok)
 
 	return api.WriteJSON(w, http.StatusOK, &model.LoginResponse{
-		User: user,
+		User: &model.UserResponse{ ID: user.ID, Username: user.Username, Email: user.Email },
 		AccessToken: accessTok,
 	})
 }
@@ -182,5 +182,9 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	h.cookieService.SetAuthCookie(w, h.refreshExpiry, newRefreshTok)
-	return api.WriteJSON(w, http.StatusOK, &model.RefreshResponse{AccessToken: newAccessTok})
+
+	return api.WriteJSON(w, http.StatusOK, &model.LoginResponse{
+		User: &model.UserResponse{ ID: user.ID, Username: user.Username, Email: user.Email },
+		AccessToken: newAccessTok,
+	})
 }

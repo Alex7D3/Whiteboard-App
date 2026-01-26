@@ -24,6 +24,6 @@ type RefreshResponse struct {
 }
 
 type LoginResponse struct {
-	User        *User  `json:"user"`
+	User        *UserResponse`json:"user"`
 	AccessToken string `json:"access_token"`
 }
